@@ -1,5 +1,5 @@
 # Packages
-packages <- c("data.table")
+packages <- c("data.table", "reshape2")
 sapply(packages, require, character.only=TRUE, quietly=TRUE)
 
 # Set path
@@ -9,24 +9,23 @@ path <- getwd()
 dtSubjectTrain <- fread(file.path(path, "train", "subject_train.txt"))
 dtSubjectTest  <- fread(file.path(path, "test" , "subject_test.txt" ))
 
-dtTrainingLabels <- fread(file.path(path, "train", "y_train.txt"))
-dtTestLabels  <- fread(file.path(path, "test" , "y_test.txt" ))
+dtActivityTrain <- fread(file.path(path, "train", "Y_train.txt"))
+dtActivityTest  <- fread(file.path(path, "test" , "Y_test.txt" ))
 
-dtTraingSet <- fread(file.path(path, "train", "X_train.txt")) 
-dtTestSet <- fread(file.path(path, "test" , "X_test.txt" ))
+dtTrain <- fread(file.path(path, "train", "X_train.txt")) 
+dtTest <- fread(file.path(path, "test" , "X_test.txt" ))
 
 # Merge
 dtSubject <- rbind(dtSubjectTrain, dtSubjectTest)
 setnames(dtSubject, "V1", "subject")
-dtActivity <- rbind(dtTrainingLabels, dtTestLabels)
+dtActivity <- rbind(dtActivityTrain, dtActivityTest)
 setnames(dtActivity, "V1", "activityNum")
-dt <- rbind(dtTraingSet, dtTestSet)
+dt <- rbind(dtTrain, dtTest)
 
 # Merge columns
 dtSubject <- cbind(dtSubject, dtActivity)
 dt <- cbind(dtSubject, dt)
 
-# Key
 setkey(dt, subject, activityNum)
 
 dtFeatures <- fread(file.path(path, "features.txt"))
@@ -35,13 +34,13 @@ setnames(dtFeatures, names(dtFeatures), c("featureNum", "featureName"))
 dtFeatures <- dtFeatures[grepl("mean\\(\\)|std\\(\\)", featureName)]
 
 dtFeatures$featureCode <- dtFeatures[, paste0("V", featureNum)]
-# head(dtFeatures)
-# dtFeatures$featureCode
+head(dtFeatures)
+dtFeatures$featureCode
 
 select <- c(key(dt), dtFeatures$featureCode)
 dt <- dt[, select, with=FALSE]
 
-dtActivityNames <- fread(file.path(path, "activity_labels.txt"))
+dtActivityNames <- fread(file.path(pathIn, "activity_labels.txt"))
 setnames(dtActivityNames, names(dtActivityNames), c("activityNum", "activityName"))
 
 dt <- merge(dt, dtActivityNames, by="activityNum", all.x=TRUE)
@@ -84,5 +83,3 @@ r1 == r2
 
 setkey(dt, subject, activity, featDomain, featAcceleration, featInstrument, featJerk, featMagnitude, featVariable, featAxis)
 dtTidy <- dt[, list(count = .N, average = mean(value)), by=key(dt)]
-
-write.table(dtTidy, "tidytable.txt", row.name=FALSE)
