@@ -55,32 +55,28 @@ dt <- merge(dt, dtFeatures[, list(featureNum, featureCode, featureName)], by="fe
 dt$activity <- factor(dt$activityName)
 dt$feature <- factor(dt$featureName)
 
-grepthis <- function (regex) {
-  grepl(regex, dt$feature)
+easygrep <- function (expression) {
+  grepl(expression, dt$feature)
 }
 ## Features with 2 categories
 n <- 2
 y <- matrix(seq(1, n), nrow=n)
-x <- matrix(c(grepthis("^t"), grepthis("^f")), ncol=nrow(y))
+x <- matrix(c(easygrep("^t"), easygrep("^f")), ncol=nrow(y))
 dt$featDomain <- factor(x %*% y, labels=c("Time", "Freq"))
-x <- matrix(c(grepthis("Acc"), grepthis("Gyro")), ncol=nrow(y))
+x <- matrix(c(easygrep("Acc"), easygrep("Gyro")), ncol=nrow(y))
 dt$featInstrument <- factor(x %*% y, labels=c("Accelerometer", "Gyroscope"))
-x <- matrix(c(grepthis("BodyAcc"), grepthis("GravityAcc")), ncol=nrow(y))
+x <- matrix(c(easygrep("BodyAcc"), easygrep("GravityAcc")), ncol=nrow(y))
 dt$featAcceleration <- factor(x %*% y, labels=c(NA, "Body", "Gravity"))
-x <- matrix(c(grepthis("mean()"), grepthis("std()")), ncol=nrow(y))
+x <- matrix(c(easygrep("mean()"), easygrep("std()")), ncol=nrow(y))
 dt$featVariable <- factor(x %*% y, labels=c("Mean", "SD"))
 ## Features with 1 category
-dt$featJerk <- factor(grepthis("Jerk"), labels=c(NA, "Jerk"))
-dt$featMagnitude <- factor(grepthis("Mag"), labels=c(NA, "Magnitude"))
+dt$featJerk <- factor(easygrep("Jerk"), labels=c(NA, "Jerk"))
+dt$featMagnitude <- factor(easygrep("Mag"), labels=c(NA, "Magnitude"))
 ## Features with 3 categories
 n <- 3
 y <- matrix(seq(1, n), nrow=n)
-x <- matrix(c(grepthis("-X"), grepthis("-Y"), grepthis("-Z")), ncol=nrow(y))
+x <- matrix(c(easygrep("-X"), easygrep("-Y"), easygrep("-Z")), ncol=nrow(y))
 dt$featAxis <- factor(x %*% y, labels=c(NA, "X", "Y", "Z"))
-
-r1 <- nrow(dt[, .N, by=c("feature")])
-r2 <- nrow(dt[, .N, by=c("featDomain", "featAcceleration", "featInstrument", "featJerk", "featMagnitude", "featVariable", "featAxis")])
-r1 == r2
 
 setkey(dt, subject, activity, featDomain, featAcceleration, featInstrument, featJerk, featMagnitude, featVariable, featAxis)
 dtTidy <- dt[, list(count = .N, average = mean(value)), by=key(dt)]
