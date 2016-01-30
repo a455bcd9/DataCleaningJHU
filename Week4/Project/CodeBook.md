@@ -14,3 +14,10 @@
 * featAverage: Average of each variable for each activity and each subject
 * subject: identifies the subject who performed the activity for each window sample. Its range is from 1 to 30.
 * activity: activity name
+* 
+
+Data
+-----
+tidytable.txt
+
+subject.activity.featDomain.featAcceleration.featInstrument.featJerk.featMagnitude.featVariable.featAxis.count.average
