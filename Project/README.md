@@ -55,14 +55,14 @@ features <- fread(file.path(path, "features.txt"))
 setnames(features, c("V1", "V2"), c("index", "feature"))
 ```
 
-# Extract mean and SD only
+* Extract mean and SD only
 ```r
 features <- features[grepl("mean\\(\\)|std\\(\\)", features$feature)]
 features$index <- paste0("V", features$index)
 dtSet <- dtSet[, c("subject","activity",features$index), with = FALSE]
 ```
 
-# Assign activity labels
+* Assign activity labels
 ```r
 activity.labels <- fread(file.path(path, "activity_labels.txt"))
 setnames(activity.labels, names(activity.labels), c("index", "name"))
