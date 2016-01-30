@@ -11,7 +11,7 @@ Steps:
 library(data.table)
 ```
 
-* Set path for fread
+* Set path for ```fread()```
 ```r
 path <- file.path(getwd(), "UCI HAR Dataset")
 ```
