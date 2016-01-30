@@ -50,11 +50,6 @@ setnames(dtSet, names(dtSet), gsub("^f", "Freq", names(dtSet)))
 setnames(dtSet, names(dtSet), gsub("-mean\\(\\)", "Mean", names(dtSet)))
 setnames(dtSet, names(dtSet), gsub("-std\\(\\)", "SD", names(dtSet)))
 setnames(dtSet, names(dtSet), gsub("-", "", names(dtSet)))
-# colnames(dtSet) <- gsub("^t", "Time", colnames(dtSet))
-# colnames(dtSet) <- gsub("^f", "Freq", colnames(dtSet))
-# colnames(dtSet) <- gsub("-mean\\(\\)", "Mean", colnames(dtSet))
-# colnames(dtSet) <- gsub("-std\\(\\)", "SD", colnames(dtSet))
-# colnames(dtSet) <- gsub("-", "", colnames(dtSet))
 
 # Tidy dateset
 dtTidy <- dtSet[, lapply(.SD, mean), by=c("subject","activity")]
