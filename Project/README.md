@@ -6,142 +6,87 @@ Analysis file: run_analysis.R
 Steps:
 ------
 
-* Load packages
+* Load package
 ```r
-packages <- c("data.table")
-sapply(packages, require, character.only=TRUE, quietly=TRUE)
+library(data.table)
 ```
 
-* Set path
+* Set path for fread
 ```r
-path <- getwd()
+path <- file.path(getwd(), "UCI HAR Dataset")
 ```
 
-* Load subjects
+* Read files
 ```r
 dtSubjectTrain <- fread(file.path(path, "train", "subject_train.txt"))
-dtSubjectTest  <- fread(file.path(path, "test" , "subject_test.txt" ))
-```
-
-* Load labels
-```
+dtSubjectTest <- fread(file.path(path, "test", "subject_test.txt"))
 dtTrainingLabels <- fread(file.path(path, "train", "y_train.txt"))
-dtTestLabels  <- fread(file.path(path, "test" , "y_test.txt" ))
+dtTestLabels <- fread(file.path(path, "test", "y_test.txt"))
+dtTrainingSet <- fread(file.path(path, "train", "X_train.txt"))
+dtTestSet <- fread(file.path(path, "test", "X_test.txt")) 
 ```
 
-* Load sets
-```r
-dtTraingSet <- fread(file.path(path, "train", "X_train.txt")) 
-dtTestSet <- fread(file.path(path, "test" , "X_test.txt" ))
-```
-
-* Concatenation of data tables
+* Merge training and test subjects
 ```r
 dtSubject <- rbind(dtSubjectTrain, dtSubjectTest)
 setnames(dtSubject, "V1", "subject")
-dtActivity <- rbind(dtTrainingLabels, dtTestLabels)
-setnames(dtActivity, "V1", "activityNum")
-dt <- rbind(dtTraingSet, dtTestSet)
 ```
 
-* Merge columns
+* Merge test and training labels
 ```r
-dtSubject <- cbind(dtSubject, dtActivity)
-dt <- cbind(dtSubject, dt)
+dtLabels <- rbind(dtTrainingLabels, dtTestLabels)
+setnames(dtLabels, "V1", "activity")
 ```
 
-* Need to set key
+* Merge test and training sets
 ```r
-setkey(dt, subject, activityNum)
+dtSet <- rbind(dtTrainingSet, dtTestSet)
 ```
 
-* Read ```features.txt``` to know the relevant variables (mean and standard deviation)
+* Merge subjects and activity labels, and then those two with sets
 ```r
-dtFeatures <- fread(file.path(path, "features.txt"))
-setnames(dtFeatures, names(dtFeatures), c("featureNum", "featureName"))
+dtSubjectLabels <- cbind(dtSubject, dtLabels)
+dtSet <- cbind(dtSubjectLabels, dtSet)
 ```
 
-* Take only mean and standard deviation
+* Assign labels to measurement variables
 ```r
-dtFeatures <- dtFeatures[grepl("mean\\(\\)|std\\(\\)", featureName)]
+features <- fread(file.path(path, "features.txt"))
+setnames(features, c("V1", "V2"), c("index", "feature"))
 ```
 
-* Conversion to a vector of variable names
+# Extract mean and SD only
 ```r
-dtFeatures$featureCode <- dtFeatures[, paste0("V", featureNum)]
+features <- features[grepl("mean\\(\\)|std\\(\\)", features$feature)]
+features$index <- paste0("V", features$index)
+dtSet <- dtSet[, c("subject","activity",features$index), with = FALSE]
 ```
 
-* Subset
+# Assign activity labels
 ```r
-select <- c(key(dt), dtFeatures$featureCode)
-dt <- dt[, select, with=FALSE]
+activity.labels <- fread(file.path(path, "activity_labels.txt"))
+setnames(activity.labels, names(activity.labels), c("index", "name"))
+dtSet <- dtSet[, activity:=activity.labels$name[dtSet$activity]]
+dtSet$activity <- factor(dtSet$activity)
+dtSet$subject <- factor(dtSet$subject)
 ```
 
-* Read ```activity_labels.txt``` to get descriptive names
+* Clean names of measurement variables
 ```r
-dtActivityNames <- fread(file.path(path, "activity_labels.txt"))
-setnames(dtActivityNames, names(dtActivityNames), c("activityNum", "activityName"))
+setnames(dtSet, c("subject", "activity", features$feature[1:66]))
+setnames(dtSet, names(dtSet), gsub("^t", "Time", names(dtSet)))
+setnames(dtSet, names(dtSet), gsub("^f", "Freq", names(dtSet)))
+setnames(dtSet, names(dtSet), gsub("-mean\\(\\)", "Mean", names(dtSet)))
+setnames(dtSet, names(dtSet), gsub("-std\\(\\)", "SD", names(dtSet)))
+setnames(dtSet, names(dtSet), gsub("-", "", names(dtSet)))
 ```
 
-* Merge labels
+* Create a tidy dateset
 ```r
-dt <- merge(dt, dtActivityNames, by="activityNum", all.x=TRUE)
+dtTidy <- dtSet[, lapply(.SD, mean), by=c("subject","activity")]
 ```
 
-* Set key
+* Write tidy data set to txt file
 ```r
-setkey(dt, subject, activityNum, activityName)
-```
-
-* Melt data
-```r
-dt <- data.table(melt(dt, key(dt), variable.name="featureCode"))
-```
-
-* Merge
-```r
-dt <- merge(dt, dtFeatures[, list(featureNum, featureCode, featureName)], by="featureCode", all.x=TRUE)
-```
-
-* Create two variables, factor of ```activityName``` and ```featureName```
-```r
-dt$activity <- factor(dt$activityName)
-dt$feature <- factor(dt$featureName)
-```
-
-* Grep using ```easygrep``` function
-```r
-easygrep <- function (expression) {
-  grepl(expression, dt$feature)
-}
-## Features with 2 categories
-n <- 2
-y <- matrix(seq(1, n), nrow=n)
-x <- matrix(c(easygrep("^t"), easygrep("^f")), ncol=nrow(y))
-dt$featDomain <- factor(x %*% y, labels=c("Time", "Freq"))
-x <- matrix(c(easygrep("Acc"), easygrep("Gyro")), ncol=nrow(y))
-dt$featInstrument <- factor(x %*% y, labels=c("Accelerometer", "Gyroscope"))
-x <- matrix(c(easygrep("BodyAcc"), easygrep("GravityAcc")), ncol=nrow(y))
-dt$featAcceleration <- factor(x %*% y, labels=c(NA, "Body", "Gravity"))
-x <- matrix(c(easygrep("mean()"), easygrep("std()")), ncol=nrow(y))
-dt$featVariable <- factor(x %*% y, labels=c("Mean", "SD"))
-## Features with 1 category
-dt$featJerk <- factor(easygrep("Jerk"), labels=c(NA, "Jerk"))
-dt$featMagnitude <- factor(easygrep("Mag"), labels=c(NA, "Magnitude"))
-## Features with 3 categories
-n <- 3
-y <- matrix(seq(1, n), nrow=n)
-x <- matrix(c(easygrep("-X"), easygrep("-Y"), easygrep("-Z")), ncol=nrow(y))
-dt$featAxis <- factor(x %*% y, labels=c(NA, "X", "Y", "Z"))
-```
-
-* New data set with the mean of each variable
-```r
-setkey(dt, subject, activity, featDomain, featAcceleration, featInstrument, featJerk, featMagnitude, featVariable, featAxis)
-dtTidy <- dt[, list(count = .N, average = mean(value)), by=key(dt)]
-```
-
-* Write the tidy table in a new file ```tidytable.txt```
-```r
-write.table(dtTidy, "tidytable.txt", row.name=FALSE)
+write.table(dtTidy, "tidydataset.txt", row.names = FALSE)
 ```
