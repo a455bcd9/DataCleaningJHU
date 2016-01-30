@@ -12,7 +12,7 @@ dtSubjectTest  <- fread(file.path(path, "test" , "subject_test.txt" ))
 dtTrainingLabels <- fread(file.path(path, "train", "y_train.txt"))
 dtTestLabels  <- fread(file.path(path, "test" , "y_test.txt" ))
 
-dtTraingSet <- fread(file.path(path, "train", "X_train.txt")) 
+dtTrainingSet <- fread(file.path(path, "train", "X_train.txt")) 
 dtTestSet <- fread(file.path(path, "test" , "X_test.txt" ))
 
 # Merge
@@ -20,7 +20,7 @@ dtSubject <- rbind(dtSubjectTrain, dtSubjectTest)
 setnames(dtSubject, "V1", "subject")
 dtActivity <- rbind(dtTrainingLabels, dtTestLabels)
 setnames(dtActivity, "V1", "activityNum")
-dt <- rbind(dtTraingSet, dtTestSet)
+dt <- rbind(dtTrainingSet, dtTestSet)
 
 # Merge columns
 dtSubject <- cbind(dtSubject, dtActivity)
